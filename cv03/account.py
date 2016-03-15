@@ -15,14 +15,17 @@ class Account:
         self.balance = 0
 
     def make_payment(self, amount):
-        # with self.condition:
-        if amount > self.balance:
-            raise InsufficientBalanceException
-        self.balance -= amount
+        with self.condition:
+            while not self.can_pay(amount):
+                self.condition.wait()
+            self.balance -= amount
+            self.condition.notify()
 
     def receive_payment(self, amount):
-        # with self.condition:
-        self.balance += amount
+        with self.condition:
+            self.condition.wait_for(self.can_receive)
+            self.balance += amount
+            self.condition.notify()
 
     def can_pay(self, amount):
         return self.balance > amount
@@ -42,12 +45,8 @@ class MakePaymentThread(Thread):
     def run(self):
         amount = MakePaymentThread.PAYMENT_AMOUNT
         for i in range(100):
-            with self.account.condition:
-                while not self.account.can_pay(amount):
-                    self.account.condition.wait()
-                self.account.make_payment(amount)
-                print("Balance decreased by: {:d}\nBalance: {:d}".format(amount, self.account.balance))
-                self.account.condition.notify_all()
+            self.account.make_payment(amount)
+            print("Balance decreased by: {:d}\nBalance: {:d}".format(amount, self.account.balance))
             # time.sleep(random.random())
 
 
@@ -62,12 +61,8 @@ class ReceivePaymentThread(Thread):
     def run(self):
         amount = ReceivePaymentThread.PAYMENT_AMOUNT
         for i in range(300):
-            with self.account.condition:
-                while not self.account.can_receive():
-                    self.account.condition.wait()
-                self.account.receive_payment(amount)
-                print("Balance increased by: {:d}\nBalance: {:d}".format(amount, self.account.balance))
-                self.account.condition.notify_all()
+            self.account.receive_payment(amount)
+            print("Balance increased by: {:d}\nBalance: {:d}".format(amount, self.account.balance))
             # time.sleep(random.random())
 
 
