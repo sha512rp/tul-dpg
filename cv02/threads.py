@@ -19,11 +19,13 @@ class Storage:
         self.capacity = capacity
 
     def create_item(self, item):
-        if len(self.data) >= self.capacity:
+        if not self.is_not_full():
             raise StorageFullException
         self.data.append(item)
 
     def take_item(self):
+        if not self.has_item():
+            raise StorageEmptyException
         return self.data.pop()
 
     def has_item(self):
@@ -36,25 +38,29 @@ class Storage:
 class ProducerThread(Thread):
     def __init__(self, storage):
         self.storage = storage
+        super(ProducerThread, self).__init__()
 
     def run(self):
         for i in range(10):
             with self.storage.condition as cond:
-                cond.wait_for(self.storage.is_not_full)
+                self.storage.condition.wait_for(self.storage.is_not_full)
                 self.storage.create_item(i)
                 print("Produced: %d" % i)
+                self.storage.condition.notify_all()
 
 
 class ConsumerThread(Thread):
     def __init__(self, storage):
         self.storage = storage
+        super(ConsumerThread, self).__init__()
 
     def run(self):
         for i in range(10):
             with self.storage.condition as cond:
-                cond.wait_for(self.storage.has_item)
+                self.storage.condition.wait_for(self.storage.has_item)
                 item = self.storage.take_item()
                 print("Consumed: %d" % item)
+                self.storage.condition.notify_all()
 
 
 class MyThread(Thread):
@@ -82,6 +88,21 @@ class MyWaitingThread(Thread):
             # print("Thread %s: %d" % (self.name, self.counter))
 
 
+def main_prod_cons():
+    storage = Storage(capacity=3)
+    producers = []
+    consumers = []
+
+    for i in range(1):
+        producers.append(ProducerThread(storage).start())
+
+    for i in range(1):
+        consumers.append(ConsumerThread(storage).start())
+
+
+
+
+
 def main_waiting():
     t1 = MyWaitingThread("thread1", 1.3)
     t2 = MyWaitingThread("thread2", 0.8)
@@ -94,8 +115,8 @@ def main_waiting():
             print("Done!")
             break
         else:
-            pass
             print(".")
+        time.sleep(0.3)
 
     t1.join()
     t2.join()
@@ -116,4 +137,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main_waiting()
+    main_prod_cons()
