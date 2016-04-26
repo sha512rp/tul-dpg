@@ -27,7 +27,7 @@ def server_socket():
 
 
 def client_socket():
-    message = "hello"
+    message = "username sharp"
     clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     clientsocket.connect((SERVER_IP, SERVER_PORT))
     clientsocket.send(message.encode('utf-8'))
