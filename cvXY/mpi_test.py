@@ -9,11 +9,16 @@ def main():
     data = 'no data'
 
     if rank == 0:
-        comm.bcast("Ping")
-        print("Server sent.")
+        for i in range(1, size):
+            data = "Ping"
+            comm.send(data, dest=i)
+            print("Ping rank <{rank}>".format(rank=i))
+            data = comm.recv(source=i)
+            print(data)
     else:
-        data = comm.gather(data, root=0)
-        print(data)
+        data = comm.recv(source=0)
+        if data == "Ping":
+            comm.send("Pong", dest=0)
 
 
 if __name__ == '__main__':
